@@ -47,7 +47,10 @@ def check_nda_status(user_id: str = Depends(get_current_user_id)):
     has_accepted = NDAService.has_accepted_nda(user_id)
     acceptance = NDAService.get_user_nda_acceptance(user_id) if has_accepted else None
     
+    # Return format matching frontend NDAStatus type
     return {
-        "has_accepted": has_accepted,
-        "acceptance": acceptance
+        "accepted": has_accepted,
+        "accepted_at": acceptance.get("accepted_at") if acceptance else None,
+        "version": acceptance.get("nda_version") if acceptance else None,
+        "nda_id": acceptance.get("id") if acceptance else None
     }
