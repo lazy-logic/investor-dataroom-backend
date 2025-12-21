@@ -25,11 +25,23 @@ def make_timezone_aware(dt: datetime) -> datetime:
 
 def generate_meeting_link() -> str:
     """
-    Generate a unique meeting link using Jitsi Meet.
+    Generate a meeting link.
+    
+    Priority:
+    1. Use Brevo booking page URL if configured (BREVO_BOOKING_URL env var)
+    2. Fall back to Jitsi Meet for instant video conferencing
+    
     Jitsi is free, open-source, and requires no API keys.
-    Links work immediately without any setup.
+    Brevo provides a booking page where investors can schedule meetings.
     """
-    # Generate a unique room name with SAYeTECH prefix for branding
+    import os
+    
+    # Check for Brevo booking URL
+    brevo_url = os.environ.get("BREVO_BOOKING_URL")
+    if brevo_url:
+        return brevo_url
+    
+    # Fall back to Jitsi Meet - generate unique room
     room_id = secrets.token_urlsafe(12)
     room_name = f"SAYeTECH-{room_id}"
     return f"https://meet.jit.si/{room_name}"
@@ -586,3 +598,110 @@ async def delete_meeting(
             status_code=500,
             detail="Failed to delete meeting"
         )
+
+
+# ==================== Brevo Webhook Endpoints ====================
+
+@router.post("/webhooks/brevo")
+async def brevo_meeting_webhook(payload: dict):
+    """
+    Webhook endpoint for Brevo meeting notifications.
+    
+    Brevo sends webhooks for the following events:
+    - meeting_booked: When a meeting is scheduled through the booking page
+    - meeting_started: When a meeting begins
+    - meeting_cancelled: When a meeting is cancelled
+    
+    To set up:
+    1. Go to Brevo Dashboard > Meetings > Settings > Webhooks
+    2. Add this URL: https://your-domain.com/api/meetings/webhooks/brevo
+    3. Select the events you want to receive
+    """
+    try:
+        event_type = payload.get("event")
+        meeting_data = payload.get("data", {})
+        
+        print(f"Received Brevo webhook: {event_type}")
+        print(f"Meeting data: {meeting_data}")
+        
+        if event_type == "meeting_booked":
+            # Create a new meeting record from Brevo booking
+            meeting_record = {
+                "investor_name": meeting_data.get("attendee_name", "Unknown"),
+                "investor_email": meeting_data.get("attendee_email", ""),
+                "scheduled_at": meeting_data.get("meeting_start_timestamp"),
+                "duration_minutes": meeting_data.get("duration_minutes", 30),
+                "meeting_link": meeting_data.get("meeting_url", ""),
+                "status": "scheduled",
+                "notes": meeting_data.get("notes", ""),
+                "source": "brevo",
+                "brevo_meeting_id": meeting_data.get("meeting_id"),
+                "created_at": get_utc_now(),
+                "updated_at": get_utc_now()
+            }
+            
+            meetings_collection.insert_one(meeting_record)
+            print(f"Created meeting from Brevo: {meeting_record['investor_email']}")
+            
+        elif event_type == "meeting_cancelled":
+            # Update meeting status if we have it
+            brevo_id = meeting_data.get("meeting_id")
+            if brevo_id:
+                meetings_collection.update_one(
+                    {"brevo_meeting_id": brevo_id},
+                    {
+                        "$set": {
+                            "status": "cancelled",
+                            "cancelled_at": get_utc_now(),
+                            "cancellation_reason": "Cancelled via Brevo",
+                            "updated_at": get_utc_now()
+                        }
+                    }
+                )
+                print(f"Cancelled Brevo meeting: {brevo_id}")
+                
+        elif event_type == "meeting_started":
+            # Log that meeting started
+            brevo_id = meeting_data.get("meeting_id")
+            if brevo_id:
+                meetings_collection.update_one(
+                    {"brevo_meeting_id": brevo_id},
+                    {
+                        "$set": {
+                            "started_at": get_utc_now(),
+                            "updated_at": get_utc_now()
+                        }
+                    }
+                )
+                print(f"Brevo meeting started: {brevo_id}")
+        
+        return {"status": "ok", "event": event_type}
+        
+    except Exception as e:
+        print(f"Error processing Brevo webhook: {e}")
+        # Return 200 to prevent Brevo from retrying
+        return {"status": "error", "message": str(e)}
+
+
+@router.get("/booking-url")
+async def get_booking_url():
+    """
+    Get the configured booking URL (Brevo or Jitsi).
+    This can be used by the frontend to display a "Book a Meeting" button.
+    """
+    import os
+    
+    brevo_url = os.environ.get("BREVO_BOOKING_URL")
+    
+    if brevo_url:
+        return {
+            "provider": "brevo",
+            "url": brevo_url,
+            "message": "Book a meeting using our Brevo booking page"
+        }
+    else:
+        return {
+            "provider": "jitsi",
+            "url": None,
+            "message": "Meetings use Jitsi Meet - links are generated when scheduling"
+        }
