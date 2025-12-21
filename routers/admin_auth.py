@@ -406,7 +406,25 @@ def list_investors(
     current_admin: dict = Depends(require_admin)
 ):
     """List all investors (Admin only)"""
+    # First try to get investors with is_active=True
     investors = list(investors_collection.find({"is_active": True}).sort("full_name", 1))
+    
+    # If no active investors, try getting all investors (legacy support)
+    if not investors:
+        investors = list(investors_collection.find({}).sort("full_name", 1))
+    
+    # If still no investors, fall back to approved access requests
+    if not investors:
+        approved_requests = list(access_requests_collection.find({"status": "approved"}).sort("full_name", 1))
+        for req in approved_requests:
+            investors.append({
+                "_id": req["_id"],
+                "email": req.get("email", ""),
+                "full_name": req.get("full_name", ""),
+                "company": req.get("company", ""),
+                "investor_id": req.get("investor_id", ""),
+                "created_at": req.get("created_at") or req.get("requested_at"),
+            })
     
     result = []
     for investor in investors:
