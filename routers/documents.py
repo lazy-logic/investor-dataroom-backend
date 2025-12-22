@@ -385,7 +385,8 @@ async def get_document_url(
         # For Cloudinary, fl_attachment should go right after /upload/ and before version
         # Correct format: /upload/fl_attachment:filename/v123456/path
         safe_filename = download_filename.replace(' ', '_')
-        encoded_filename = urllib.parse.quote(safe_filename, safe='')
+        # Keep dots, hyphens, underscores - they're safe for Cloudinary
+        encoded_filename = urllib.parse.quote(safe_filename, safe='.-_')
         
         # Handle different Cloudinary URL patterns
         if "/raw/upload/" in file_url:
