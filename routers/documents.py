@@ -381,11 +381,19 @@ async def get_document_url(
     download_url = file_url
     if file_url and "cloudinary" in file_url:
         import urllib.parse
-        encoded_filename = urllib.parse.quote(download_filename)
+        
+        # For Cloudinary, fl_attachment should go right after /upload/ and before version
+        # Correct format: /upload/fl_attachment:filename/v123456/path
+        safe_filename = download_filename.replace(' ', '_')
+        encoded_filename = urllib.parse.quote(safe_filename, safe='')
+        
+        # Handle different Cloudinary URL patterns
         if "/raw/upload/" in file_url:
             download_url = file_url.replace("/raw/upload/", f"/raw/upload/fl_attachment:{encoded_filename}/")
         elif "/image/upload/" in file_url:
             download_url = file_url.replace("/image/upload/", f"/image/upload/fl_attachment:{encoded_filename}/")
+        elif "/upload/" in file_url:
+            download_url = file_url.replace("/upload/", f"/upload/fl_attachment:{encoded_filename}/")
     
     # Log document view (only for non-admins to track investor activity)
     if not current_user.get("is_admin"):
