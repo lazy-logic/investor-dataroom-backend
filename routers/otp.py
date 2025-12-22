@@ -327,7 +327,15 @@ async def verify_otp(request: OTPVerify):
                 "token_type": "bearer",
                 "user_id": str(user["_id"]),
                 "user_email": user["email"],
-                "full_name": user.get("full_name", "")
+                "user": {
+                    "id": str(user["_id"]),
+                    "email": user["email"],
+                    "full_name": user.get("full_name", ""),
+                    "company": user.get("company", ""),
+                    "phone": user.get("phone", ""),
+                    "role": "investor",
+                    "is_active": user.get("is_active", True)
+                }
             }
         
         else:
