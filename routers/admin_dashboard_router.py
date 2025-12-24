@@ -7,7 +7,7 @@ from repositories.admin_repository import AdminRepository
 from repositories.audit_log_repository import (
     AuditLogRepository,
 )  # Add AuditLogRepository to top-level imports
-from admin import get_current_admin
+from routers.admin_auth import get_current_admin
 from services.auth_service import AuthService
 from utils.email_templates import (
     get_confirmation_email_template,
