@@ -221,17 +221,39 @@ async def get_my_meetings(
     """Get meetings for the current logged-in user"""
     try:
         user_id = str(current_user.get("_id", current_user.get("id")))
+        user_email = current_user.get("email", "")
+        investor_id_field = current_user.get("investor_id", "")  # Custom investor ID like INV-xxxxx
         
-        meetings = list(meetings_collection.find({
-            "investor_id": user_id
-        }).sort("scheduled_at", -1))
+        # Search by multiple fields to catch all possible ways the admin may have stored investor_id
+        # This ensures meetings booked by admin show up for the investor
+        query = {
+            "$or": [
+                {"investor_id": user_id},                    # Match by MongoDB _id
+                {"investor_id": investor_id_field},          # Match by custom investor_id field
+                {"investor_email": user_email},              # Match by email stored in meeting
+            ]
+        }
         
+        # Also filter out empty string matches
+        if not investor_id_field:
+            query["$or"] = [q for q in query["$or"] if q.get("investor_id") != ""]
+        
+        meetings = list(meetings_collection.find(query).sort("scheduled_at", -1))
+        
+        # Deduplicate meetings by ID (in case of overlapping matches)
+        seen_ids = set()
+        unique_meetings = []
         for meeting in meetings:
-            meeting["id"] = str(meeting.pop("_id"))
-            if "scheduled_at" in meeting and isinstance(meeting["scheduled_at"], datetime):
-                meeting["scheduled_at"] = meeting["scheduled_at"].isoformat()
+            meeting_id = str(meeting["_id"])
+            if meeting_id not in seen_ids:
+                seen_ids.add(meeting_id)
+                meeting["id"] = meeting_id
+                del meeting["_id"]
+                if "scheduled_at" in meeting and isinstance(meeting["scheduled_at"], datetime):
+                    meeting["scheduled_at"] = meeting["scheduled_at"].isoformat()
+                unique_meetings.append(meeting)
         
-        return meetings
+        return unique_meetings
         
     except Exception as e:
         print(f"Error getting user meetings: {e}")
