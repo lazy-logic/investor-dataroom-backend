@@ -387,12 +387,17 @@ async def get_document_url(
     download_url = file_url
     if file_url and "cloudinary" in file_url:
         import urllib.parse
+        import os
         
         # For Cloudinary, fl_attachment should go right after /upload/ and before version
         # Correct format: /upload/fl_attachment:filename/v123456/path
-        safe_filename = download_filename.replace(' ', '_')
-        # Keep dots, hyphens, underscores - they're safe for Cloudinary
-        encoded_filename = urllib.parse.quote(safe_filename, safe='.-_')
+        # IMPORTANT: Remove file extension - Cloudinary interprets dots as transformation flags
+        name_without_ext = os.path.splitext(download_filename)[0]
+        safe_filename = name_without_ext.replace(' ', '_')
+        # Remove any remaining dots that could cause issues
+        safe_filename = safe_filename.replace('.', '_')
+        # URL encode, keeping only safe characters
+        encoded_filename = urllib.parse.quote(safe_filename, safe='-_')
         
         # Handle different Cloudinary URL patterns
         if "/raw/upload/" in file_url:
@@ -470,8 +475,11 @@ async def download_document(
         except Exception:
             # Fallback to manual URL construction if service method fails
             import urllib.parse
-            safe_filename = download_filename.replace(' ', '_')
-            encoded_filename = urllib.parse.quote(safe_filename, safe='.-_')
+            import os
+            # Remove file extension - Cloudinary interprets dots as transformation flags
+            name_without_ext = os.path.splitext(download_filename)[0]
+            safe_filename = name_without_ext.replace(' ', '_').replace('.', '_')
+            encoded_filename = urllib.parse.quote(safe_filename, safe='-_')
             if "/raw/upload/" in file_url:
                 download_url = file_url.replace("/raw/upload/", f"/raw/upload/fl_attachment:{encoded_filename}/")
             elif "/image/upload/" in file_url:

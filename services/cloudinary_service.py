@@ -109,6 +109,7 @@ class CloudinaryService:
         """
         try:
             import urllib.parse
+            import os
 
             # Get base URL
             base_url = cloudinary.utils.cloudinary_url(
@@ -117,8 +118,14 @@ class CloudinaryService:
             )[0]
 
             # Prepare filename for attachment flag
-            safe_filename = filename.replace(' ', '_')
-            encoded_filename = urllib.parse.quote(safe_filename, safe='.-_')
+            # IMPORTANT: Remove file extension - Cloudinary interprets dots as transformation flags
+            # The original file extension is preserved automatically by Cloudinary
+            name_without_ext = os.path.splitext(filename)[0]
+            safe_filename = name_without_ext.replace(' ', '_')
+            # Remove any remaining dots and special characters that could cause issues
+            safe_filename = safe_filename.replace('.', '_')
+            # URL encode the filename, keeping safe characters
+            encoded_filename = urllib.parse.quote(safe_filename, safe='-_')
 
             # Add attachment flag to URL
             # Cloudinary format: /upload/fl_attachment:filename/v123456/path
