@@ -1,4 +1,4 @@
-from ..database import admin_users_collection
+from database import admin_users_collection
 from bson import ObjectId
 from datetime import datetime
 from typing import Optional, List

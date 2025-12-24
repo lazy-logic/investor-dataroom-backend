@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 from bson import ObjectId
 import re
 import secrets
-from ..database import access_tokens_collection
+from database import access_tokens_collection
 
 class Helpers:
     @staticmethod

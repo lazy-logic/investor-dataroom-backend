@@ -131,7 +131,7 @@ async def get_system_settings(current_admin: dict = Depends(get_current_admin)):
     """
     Get system settings
     """
-    from ..database import system_settings_collection
+    from database import system_settings_collection
 
     settings_doc = system_settings_collection.find_one({"_id": "default"})
 
@@ -155,7 +155,7 @@ async def update_system_settings(
     """
     Update system settings
     """
-    from ..database import system_settings_collection
+    from database import system_settings_collection
 
     settings_dict = settings.model_dump()
     settings_dict["_id"] = "default"
@@ -203,7 +203,7 @@ async def get_email_template(
     """
     Get email template
     """
-    from ..database import email_templates_collection
+    from database import email_templates_collection
 
     template = email_templates_collection.find_one({"template_type": template_type})
 
@@ -248,7 +248,7 @@ async def update_email_template(
     """
     Update email template
     """
-    from ..database import email_templates_collection
+    from database import email_templates_collection
 
     template_dict = template.model_dump()
     template_dict["updated_at"] = datetime.utcnow()
@@ -385,7 +385,7 @@ async def system_health(current_admin: dict = Depends(get_current_admin)):
     """
     Get system health status
     """
-    from ..database import db, client
+    from database import db, client
 
     try:
         # Check MongoDB connection
@@ -395,7 +395,7 @@ async def system_health(current_admin: dict = Depends(get_current_admin)):
         db_status = f"unhealthy: {str(e)}"
 
     # Get collection stats
-    from ..database import (
+    from database import (
         access_requests_collection,
         investors_collection,
         admin_users_collection,  
@@ -430,7 +430,7 @@ async def cleanup_old_data(
     """
     Cleanup old audit logs and notifications
     """
-    from ..database import (
+    from database import (
         audit_logs_collection,
         alert_logs_collection,
     )  # Changed notifications_collection to alert_logs_collection

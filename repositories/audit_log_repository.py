@@ -1,5 +1,5 @@
 from datetime import datetime
-from ..database import audit_logs_collection, db 
+from database import audit_logs_collection, db 
 
 class AuditLogRepository:
     def create(self, log_data: dict):
