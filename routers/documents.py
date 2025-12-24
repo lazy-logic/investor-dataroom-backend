@@ -333,6 +333,11 @@ async def get_document_url(
         )
     
     file_url = document.get("file_url") or document.get("file_path")
+    
+    # Ensure HTTPS for Cloudinary URLs
+    if file_url and file_url.startswith("http://"):
+        file_url = file_url.replace("http://", "https://", 1)
+    
     file_type = document.get("file_type", "").lower()
     file_extension = document.get("file_extension", "").lower()
     mime_type = document.get("mime_type", "application/octet-stream")

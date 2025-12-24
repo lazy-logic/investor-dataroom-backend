@@ -20,6 +20,7 @@ from routers.company_info import router as company_info_router
 from routers.otp import router as otp_router
 from config import settings
 from routers.meetings import router as meetings_router
+from routers.admin_dashboard_router import router as admin_settings_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -63,6 +64,7 @@ app.include_router(qa_router)               # /api/qa/* - Q&A system
 app.include_router(company_info_router)     # /api/company/* - Company information
 app.include_router(otp_router) 
 app.include_router(meetings_router)
+app.include_router(admin_settings_router)  # /api/admin/settings/* - Admin dashboard settings, health, cleanup
 
 @app.get("/")
 def root():

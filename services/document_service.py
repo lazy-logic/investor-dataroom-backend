@@ -40,9 +40,12 @@ class DocumentService:
         # Read file bytes
         file_bytes = await file.read()
 
-        # Generate unique public ID
-        safe_filename = filename.replace(" ", "_").replace(".", "_")
-        public_id = f"dataroom_documents/{user_id}/{uuid.uuid4()}_{safe_filename}"
+        # Generate unique public ID - preserve the file extension
+        name_part, ext_part = os.path.splitext(filename)
+        # Only sanitize the name part, keep the extension intact
+        safe_name = name_part.replace(" ", "_").replace(".", "_")
+        safe_filename = f"{safe_name}{ext_part}"  # e.g., "My_Document.pdf"
+        public_id = f"dataroom_documents/{user_id}/{uuid.uuid4()}_{safe_name}"
 
         # Upload to Cloudinary
         upload_result = CloudinaryService.upload_file_from_bytes(
