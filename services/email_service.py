@@ -121,7 +121,7 @@ class EmailService:
     @staticmethod
     def send_access_approved(email: str, name: str, token: str):
         subject = "Access Approved - SAYeTECH Dataroom"
-        link = f"https://investor-dataroom-rq1l.vercel.app/login"
+        link = f"https://investor-dataroom-frontend.vercel.app/login"
         body = f"""
         <h2>Welcome, {name}!</h2>
         <p>Your access to the SAYeTECH investor dataroom has been approved.</p>
@@ -183,7 +183,7 @@ class EmailService:
     def send_approval_email(email: str, name: str, investor_id: str):
         """Send approval email with investor ID"""
         subject = "Access Request Approved - SAYeTECH Dataroom"
-        login_link = "https://investor-dataroom-rq1l.vercel.app/login"
+        login_link = "https://investor-dataroom-frontend.vercel.app/login"
         
         body = f"""
         <!DOCTYPE html>

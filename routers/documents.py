@@ -18,6 +18,7 @@ from services.document_service import DocumentService
 from services.permission_service import PermissionService
 from services.nda_service import NDAService
 from services.auth_service import AuthService
+from services.cloudinary_service import CloudinaryService
 from database import (
     document_categories_collection,
     documents_collection,
@@ -434,33 +435,62 @@ async def download_document(
     if not user_data.get("is_admin"):
         check_nda_acceptance(user_data)
         check_access_validity(user_data)
-        
+
         if not PermissionService.can_download(user_data["id"]):
             raise HTTPException(
                 status_code=403,
                 detail="You do not have download permissions"
             )
-    
+
     document = documents_collection.find_one({"_id": ObjectId(document_id)})
-    
+
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
-    # For Cloudinary URLs, redirect to the URL
+
+    # Get file URL and metadata
     file_url = document.get("file_url") or document.get("file_path")
-    
+    original_filename = document.get("original_filename", "")
+    title = document.get("title", "document")
+    file_extension = document.get("file_extension", "")
+
+    # Create download filename
+    download_filename = original_filename if original_filename else title
+    if download_filename and file_extension and not download_filename.lower().endswith(file_extension):
+        download_filename = download_filename + file_extension
+
+    # Create download URL with attachment flag for Cloudinary
+    download_url = file_url
+    if file_url and "cloudinary" in file_url and document.get("cloudinary_public_id"):
+        try:
+            download_url = CloudinaryService.get_download_url(
+                public_id=document["cloudinary_public_id"],
+                filename=download_filename,
+                resource_type=document.get("cloudinary_resource_type", "auto")
+            )
+        except Exception:
+            # Fallback to manual URL construction if service method fails
+            import urllib.parse
+            safe_filename = download_filename.replace(' ', '_')
+            encoded_filename = urllib.parse.quote(safe_filename, safe='.-_')
+            if "/raw/upload/" in file_url:
+                download_url = file_url.replace("/raw/upload/", f"/raw/upload/fl_attachment:{encoded_filename}/")
+            elif "/image/upload/" in file_url:
+                download_url = file_url.replace("/image/upload/", f"/image/upload/fl_attachment:{encoded_filename}/")
+            elif "/upload/" in file_url:
+                download_url = file_url.replace("/upload/", f"/upload/fl_attachment:{encoded_filename}/")
+
     # Log access
     DocumentService.log_document_access(
         document_id=document_id,
         user_id=user_data["id"],
         action="download",
-        ip_address=request.client.host,
+        ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent", "")
     )
-    
-    # Redirect to Cloudinary URL
+
+    # Redirect to Cloudinary URL with attachment flag
     from fastapi.responses import RedirectResponse
-    return RedirectResponse(url=file_url)
+    return RedirectResponse(url=download_url)
 
 # Document Management
 

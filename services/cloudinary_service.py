@@ -95,6 +95,50 @@ class CloudinaryService:
             )
 
     @staticmethod
+    def get_download_url(public_id: str, filename: str, resource_type: str = "auto") -> str:
+        """
+        Generate a download URL for a Cloudinary file with attachment flag.
+
+        Args:
+            public_id: Public ID of the file
+            filename: Desired download filename
+            resource_type: Type of resource (auto, image, raw, video)
+
+        Returns:
+            Download URL with attachment flag
+        """
+        try:
+            import urllib.parse
+
+            # Get base URL
+            base_url = cloudinary.utils.cloudinary_url(
+                public_id,
+                resource_type=resource_type
+            )[0]
+
+            # Prepare filename for attachment flag
+            safe_filename = filename.replace(' ', '_')
+            encoded_filename = urllib.parse.quote(safe_filename, safe='.-_')
+
+            # Add attachment flag to URL
+            # Cloudinary format: /upload/fl_attachment:filename/v123456/path
+            if "/raw/upload/" in base_url:
+                download_url = base_url.replace("/raw/upload/", f"/raw/upload/fl_attachment:{encoded_filename}/")
+            elif "/image/upload/" in base_url:
+                download_url = base_url.replace("/image/upload/", f"/image/upload/fl_attachment:{encoded_filename}/")
+            elif "/upload/" in base_url:
+                download_url = base_url.replace("/upload/", f"/upload/fl_attachment:{encoded_filename}/")
+            else:
+                download_url = base_url
+
+            return download_url
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Cloudinary download URL generation failed: {str(e)}"
+            )
+
+    @staticmethod
     def get_file_info(public_id: str, resource_type: str = "auto") -> dict:
         """
         Get detailed information about a Cloudinary file.
